@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>像素机甲对战</title>
+    <style>
+        body {
+            background: #1a1a2e;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            font-family: 'Courier New', monospace;
+            color: #eee;
+        }
+        .game-container {
+            text-align: center;
+        }
+        canvas {
+            border: 4px solid #4a4a6a;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            background: #0f0f1a;
+        }
+        .controls {
+            margin-top: 20px;
+            padding: 15px;
+            background: #252540;
+            border-radius: 8px;
+            border: 2px solid #4a4a6a;
+        }
+        h1 {
+            color: #ff6b6b;
+            text-shadow: 2px 2px #4a4a6a;
+            margin-bottom: 20px;
+        }
+        .instructions {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #aaa;
+        }
+        .key {
+            display: inline-block;
+            background: #4a4a6a;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin: 0 3px;
+            border-bottom: 2px solid #2a2a4a;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🎮 像素机甲对战 🎮</h1>
+        <canvas id="gameCanvas" width="800" height="500"></canvas>
+        <div class="controls">
+            <p><strong>玩家1（蓝色）：</strong><span class="key">A</span>/<span class="key">D</span> 移动 | <span class="key">W</span> 跳跃 | <span class="key">J</span> 攻击 | <span class="key">K</span> 防御</p>
+            <p><strong>玩家2（红色）：</strong><span class="key">←</span>/<span class="key">→</span> 移动 | <span class="key">↑</span> 跳跃 | <span class="key">1</span> 攻击 | <span class="key">2</span> 防御</p>
+            <p><span class="key">R</span> 重新开始</p>
+            <div class="instructions">双人对战！控制你的机甲击败对手！</div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+
+        const PIXEL_SCALE = 4;
+        const GRAVITY = 0.5;
+        const GROUND_Y = 420;
+
+        let gameState = 'playing';
+        let frameCount = 0;
+
+        const colors = {
+            blueMech: {
+                primary: '#4a9fff',
+                secondary: '#2a6fcf',
+                accent: '#00d4ff',
+                dark: '#1a3f6f'
+            },
+            redMech: {
+                primary: '#ff4a4a',
+                secondary: '#cf2a2a',
+                accent: '#ff8800',
+                dark: '#6f1a1a'
+            }
+        };
+
+        class Mech {
+            constructor(x, colorSet) {
+                this.x = x;
+                this.y = GROUND_Y - 80;
+                this.width = 60;
+                this.height = 80;
+                this.vx = 0;
+                this.vy = 0;
+                this.colorSet = colorSet;
+                this.health = 100;
+                this.maxHealth = 100;
+                this.isDefending = false;
+                this.isAttacking = false;
+                this.attackCooldown = 0;
+                this.attackFrame = 0;
+                this.defendFrame = 0;
+                this.walkFrame = 0;
+                this.facingRight = true;
+                this.isJumping = false;
+            }
+
+            update(opponent) {
+                if (this.attackCooldown > 0) this.attackCooldown--;
+                if (this.isAttacking) {
+                    this.attackFrame++;
+                    if (this.attackFrame > 20) {
+                        this.isAttacking = false;
+                        this.attackFrame = 0;
+                    }
+                }
+                if (this.isDefending) {
+                    this.defendFrame++;
+                } else if (this.defendFrame > 0) {
+                    this.defendFrame = Math.max(0, this.defendFrame - 3);
+                }
+
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += GRAVITY;
+
+                if (this.y >= GROUND_Y - this.height) {
+                    this.y = GROUND_Y - this.height;
+                    this.vy = 0;
+                    this.isJumping = false;
+                }
+
+                this.x = Math.max(0, Math.min(canvas.width - this.width, this.x));
+
+                if (Math.abs(this.vx) > 0.1) {
+                    this.walkFrame++;
+                }
+
+                this.facingRight = opponent.x > this.x;
+            }
+
+            attack(opponent) {
+                if (this.attackCooldown > 0 || this.isDefending) return;
+                this.isAttacking = true;
+                this.attackFrame = 0;
+                this.attackCooldown = 40;
+
+                const attackRange = 80;
+                const dist = Math.abs(this.x - opponent.x);
+                if (dist < attackRange) {
+                    let damage = 15;
+                    if (opponent.isDefending) {
+                        damage = 5;
+                    }
+                    opponent.takeDamage(damage);
+                }
+            }
+
+            defend(active) {
+                this.isDefending = active;
+            }
+
+            takeDamage(amount) {
+                this.health -= amount;
+                if (this.health <= 0) {
+                    this.health = 0;
+                }
+            }
+
+            jump() {
+                if (!this.isJumping) {
+                    this.vy = -12;
+                    this.isJumping = true;
+                }
+            }
+
+            drawPixelRect(x, y, w, h, color) {
+                ctx.fillStyle = color;
+                ctx.fillRect(x, y, w, h);
+            }
+
+            draw() {
+                const cx = this.x + this.width / 2;
+                const cy = this.y + this.height / 2;
+
+                ctx.save();
+                if (!this.facingRight) {
+                    ctx.translate(cx, 0);
+                    ctx.scale(-1, 1);
+                    ctx.translate(-cx, 0);
+                }
+
+                const legOffset = Math.sin(this.walkFrame * 0.2) * 4;
+                const bodyBob = Math.abs(Math.sin(this.walkFrame * 0.2)) * 2;
+                const y = this.y + bodyBob;
+
+                this.drawPixelRect(this.x + 10, y + 50, 12, 30, this.colorSet.secondary);
+                this.drawPixelRect(this.x + 38, y + 50, 12, 30, this.colorSet.secondary);
+                this.drawPixelRect(this.x + 8, y + 72, 16, 8, this.colorSet.dark);
+                this.drawPixelRect(this.x + 36, y + 72, 16, 8, this.colorSet.dark);
+
+                this.drawPixelRect(this.x + 5, y + 20, 50, 35, this.colorSet.primary);
+                this.drawPixelRect(this.x + 10, y + 25, 40, 25, this.colorSet.secondary);
+                this.drawPixelRect(this.x + 20, y + 30, 20, 15, this.colorSet.accent);
+
+                this.drawPixelRect(this.x + 15, y, 30, 25, this.colorSet.primary);
+                this.drawPixelRect(this.x + 20, y + 5, 20, 15, this.colorSet.secondary);
+                this.drawPixelRect(this.x + 25, y + 8, 10, 8, this.colorSet.accent);
+
+                let armX1 = this.x - 8;
+                let armX2 = this.x + 58;
+
+                if (this.isAttacking) {
+                    const attackProgress = this.attackFrame / 20;
+                    const punchExtend = Math.sin(attackProgress * Math.PI) * 30;
+                    armX2 = this.x + 58 + punchExtend;
+                } else if (this.isDefending) {
+                    armX1 = this.x + 5;
+                    armX2 = this.x + 45;
+                }
+
+                this.drawPixelRect(armX1, y + 22, 13, 10, this.colorSet.primary);
+                this.drawPixelRect(armX2, y + 22, 13, 10, this.colorSet.primary);
+
+                if (this.isDefending) {
+                    this.drawPixelRect(this.x, y + 10, 60, 50, 'rgba(0, 212, 255, 0.3)');
+                    this.drawPixelRect(this.x + 2, y + 12, 56, 46, 'rgba(0, 212, 255, 0.2)');
+                }
+
+                ctx.restore();
+            }
+
+            drawHealthBar(x, y) {
+                const barWidth = 150;
+                const barHeight = 20;
+
+                ctx.fillStyle = '#333';
+                ctx.fillRect(x, y, barWidth, barHeight);
+
+                const healthPercent = this.health / this.maxHealth;
+                let healthColor = '#4aff4a';
+                if (healthPercent < 0.3) healthColor = '#ff4a4a';
+                else if (healthPercent < 0.6) healthColor = '#ffaa4a';
+
+                ctx.fillStyle = healthColor;
+                ctx.fillRect(x, y, barWidth * healthPercent, barHeight);
+
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x, y, barWidth, barHeight);
+
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 14px Courier New';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${Math.ceil(this.health)}/${this.maxHealth}`, x + barWidth / 2, y + 15);
+            }
+        }
+
+        let player1Mech = new Mech(100, colors.blueMech);
+        let player2Mech = new Mech(640, colors.redMech);
+
+        const keys = {};
+        document.addEventListener('keydown', (e) => {
+            keys[e.key.toLowerCase()] = true;
+            if (e.key.toLowerCase() === 'r') resetGame();
+        });
+        document.addEventListener('keyup', (e) => {
+            keys[e.key.toLowerCase()] = false;
+        });
+
+        function resetGame() {
+            player1Mech = new Mech(100, colors.blueMech);
+            player2Mech = new Mech(640, colors.redMech);
+            gameState = 'playing';
+        }
+
+        function handleInput() {
+            player1Mech.vx = 0;
+            if (keys['a']) player1Mech.vx = -5;
+            if (keys['d']) player1Mech.vx = 5;
+            if (keys['w']) player1Mech.jump();
+            if (keys['j']) player1Mech.attack(player2Mech);
+            player1Mech.defend(keys['k']);
+
+            player2Mech.vx = 0;
+            if (keys['arrowleft']) player2Mech.vx = -5;
+            if (keys['arrowright']) player2Mech.vx = 5;
+            if (keys['arrowup']) player2Mech.jump();
+            if (keys['1']) player2Mech.attack(player1Mech);
+            player2Mech.defend(keys['2']);
+        }
+
+        function drawBackground() {
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#0a0a1a');
+            gradient.addColorStop(0.5, '#1a1a3a');
+            gradient.addColorStop(1, '#2a2a4a');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#fff';
+            for (let i = 0; i < 50; i++) {
+                const sx = (i * 137 + frameCount * 0.1) % canvas.width;
+                const sy = (i * 89) % (GROUND_Y - 100);
+                const size = (i % 3) + 1;
+                ctx.fillRect(sx, sy, size, size);
+            }
+
+            ctx.fillStyle = '#1a1a3a';
+            for (let i = 0; i < 8; i++) {
+                const bx = i * 120;
+                const bh = 80 + (i % 3) * 40;
+                ctx.fillRect(bx, GROUND_Y - bh, 80, bh);
+                ctx.fillStyle = '#3a3a5a';
+                for (let wy = GROUND_Y - bh + 10; wy < GROUND_Y - 20; wy += 20) {
+                    for (let wx = bx + 10; wx < bx + 70; wx += 20) {
+                        if (Math.random() > 0.3) {
+                            ctx.fillRect(wx, wy, 8, 12);
+                        }
+                    }
+                }
+                ctx.fillStyle = '#1a1a3a';
+            }
+
+            ctx.fillStyle = '#2a2a4a';
+            ctx.fillRect(0, GROUND_Y, canvas.width, canvas.height - GROUND_Y);
+
+            ctx.fillStyle = '#3a3a5a';
+            for (let i = 0; i < canvas.width; i += 20) {
+                ctx.fillRect(i, GROUND_Y, 10, 4);
+            }
+        }
+
+        function drawGameOver() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = player1Mech.health <= 0 ? '#ff4a4a' : '#4aff4a';
+            ctx.font = 'bold 48px Courier New';
+            ctx.textAlign = 'center';
+            const winner = player1Mech.health <= 0 ? '玩家2（红色）' : '玩家1（蓝色）';
+            ctx.fillText(`${winner} 获胜！`, canvas.width / 2, canvas.height / 2 - 30);
+
+            ctx.fillStyle = '#fff';
+            ctx.font = '24px Courier New';
+            ctx.fillText('按 R 键重新开始', canvas.width / 2, canvas.height / 2 + 20);
+        }
+
+        function gameLoop() {
+            frameCount++;
+
+            if (gameState === 'playing') {
+                handleInput();
+                player1Mech.update(player2Mech);
+                player2Mech.update(player1Mech);
+
+                if (player1Mech.health <= 0 || player2Mech.health <= 0) {
+                    gameState = 'gameover';
+                }
+            }
+
+            drawBackground();
+            player1Mech.draw();
+            player2Mech.draw();
+
+            player1Mech.drawHealthBar(30, 20);
+            player2Mech.drawHealthBar(canvas.width - 180, 20);
+
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 16px Courier New';
+            ctx.textAlign = 'left';
+            ctx.fillText('玩家1（蓝色）', 30, 55);
+            ctx.textAlign = 'right';
+            ctx.fillText('玩家2（红色）', canvas.width - 30, 55);
+
+            if (gameState === 'gameover') {
+                drawGameOver();
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>

@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>梦幻泡泡世界</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-color-1: #E0F7FA;
+            --bg-color-2: #FCE4EC;
+            --bg-color-3: #F3E5F5;
+        }
+
+        body {
+            overflow: hidden;
+            font-family: 'Quicksand', 'Microsoft YaHei', sans-serif;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        #background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                180deg,
+                var(--bg-color-1) 0%,
+                var(--bg-color-2) 50%,
+                var(--bg-color-3) 100%
+            );
+            z-index: -2;
+        }
+
+        #particles-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .bg-particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            animation: twinkle 3s ease-in-out infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.2); }
+        }
+
+        #bubble-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .bubble {
+            position: absolute;
+            border-radius: 50%;
+            cursor: pointer;
+            pointer-events: auto;
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            will-change: transform, opacity, left, top;
+        }
+
+        .bubble::before {
+            content: '';
+            position: absolute;
+            top: 12%;
+            left: 18%;
+            width: 35%;
+            height: 35%;
+            background: radial-gradient(
+                circle,
+                rgba(255, 255, 255, 0.95) 0%,
+                rgba(255, 255, 255, 0.4) 50%,
+                transparent 70%
+            );
+            border-radius: 50%;
+            filter: blur(1px);
+        }
+
+        .bubble::after {
+            content: '';
+            position: absolute;
+            bottom: 20%;
+            right: 15%;
+            width: 15%;
+            height: 15%;
+            background: radial-gradient(
+                circle,
+                rgba(255, 255, 255, 0.5),
+                transparent
+            );
+            border-radius: 50%;
+        }
+
+        .bubble:hover {
+            transform: scale(1.15);
+        }
+
+        @keyframes bubbleBurst {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            40% {
+                transform: scale(1.4);
+                opacity: 0.6;
+            }
+            100% {
+                transform: scale(0);
+                opacity: 0;
+            }
+        }
+
+        .bubble.bursting {
+            animation: bubbleBurst 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+            pointer-events: none;
+        }
+
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            will-change: transform, opacity;
+        }
+
+        @keyframes particleFly {
+            0% {
+                opacity: 1;
+                transform: translate(0, 0) scale(1) rotate(0deg);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(var(--tx), var(--ty)) scale(0.3) rotate(180deg);
+            }
+        }
+
+        #title {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: clamp(2rem, 8vw, 4rem);
+            font-weight: 600;
+            background: linear-gradient(
+                135deg,
+                #FF6B9D 0%,
+                #C44CFF 25%,
+                #6EB5FF 50%,
+                #50E3C2 75%,
+                #FF6B9D 100%
+            );
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientShift 8s ease infinite;
+            text-align: center;
+            pointer-events: none;
+            z-index: 10;
+            letter-spacing: 0.1em;
+            text-shadow: 0 0 40px rgba(196, 76, 255, 0.3);
+            filter: drop-shadow(0 0 30px rgba(255, 107, 157, 0.4));
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        #instructions {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(100, 100, 120, 0.7);
+            font-size: clamp(0.9rem, 2.5vw, 1.1rem);
+            text-align: center;
+            pointer-events: none;
+            z-index: 10;
+            animation: fadeInUp 1s ease 1s both;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        .sparkle {
+            position: fixed;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        @keyframes sparkleAnim {
+            0% {
+                transform: scale(0) rotate(0deg);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1) rotate(180deg);
+                opacity: 0.8;
+            }
+            100% {
+                transform: scale(0) rotate(360deg);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="background"></div>
+    <div id="particles-bg"></div>
+    <div id="bubble-container"></div>
+    <h1 id="title">梦幻泡泡世界</h1>
+    <p id="instructions">✨ 点击气泡创造奇迹 ✨</p>
+
+    <script>
+        const COLORS = [
+            { gradient: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), #FFB6C1 50%, rgba(255,182,193,0.6))', shadow: 'rgba(255,182,193,0.6)' },
+            { gradient: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), #87CEEB 50%, rgba(135,206,235,0.6))', shadow: 'rgba(135,206,235,0.6)' },
+            { gradient: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), #98FB98 50%, rgba(152,251,152,0.6))', shadow: 'rgba(152,251,152,0.6)' },
+            { gradient: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), #DDA0DD 50%, rgba(238,130,238,0.6))', shadow: 'rgba(238,130,238,0.6)' },
+            { gradient: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), #FFDAB9 50%, rgba(255,228,181,0.6))', shadow: 'rgba(255,228,181,0.6)' },
+            { gradient: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), #ADD8E6 50%, rgba(173,216,230,0.6))', shadow: 'rgba(173,216,230,0.6)' },
+            { gradient: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), #E6E6FA 50%, rgba(230,230,250,0.6))', shadow: 'rgba(230,230,250,0.6)' },
+            { gradient: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), #FFE4E1 50%, rgba(255,228,225,0.6))', shadow: 'rgba(255,228,225,0.6)' }
+        ];
+
+        const AppState = {
+            bubbles: [],
+            maxBubbles: 30,
+            isRunning: true,
+            lastTime: 0,
+            lastSpawnTime: 0,
+            spawnInterval: 400
+        };
+
+        let container, bubbleContainer;
+        let windowWidth, windowHeight;
+        let uniqueId = 0;
+        let audioContext = null;
+        let isAudioInitialized = false;
+
+        function initAudio() {
+            if (isAudioInitialized) return;
+            
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                isAudioInitialized = true;
+            } catch (e) {
+                console.log('音频上下文不支持');
+            }
+        }
+
+        function playBubblePopSound() {
+            if (!isAudioInitialized) {
+                initAudio();
+            }
+            
+            if (!audioContext) return;
+            
+            try {
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+                
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                const filterNode = audioContext.createBiquadFilter();
+                
+                oscillator.connect(filterNode);
+                filterNode.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                const baseFreq = 800 + Math.random() * 400;
+                
+                oscillator.frequency.setValueAtTime(baseFreq, audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(
+                    baseFreq * 0.3,
+                    audioContext.currentTime + 0.15
+                );
+                
+                oscillator.type = 'sine';
+                
+                filterNode.type = 'lowpass';
+                filterNode.frequency.setValueAtTime(2000, audioContext.currentTime);
+                filterNode.Q.setValueAtTime(1, audioContext.currentTime);
+                
+                gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.2);
+                
+                setTimeout(() => {
+                    const popOsc = audioContext.createOscillator();
+                    const popGain = audioContext.createGain();
+                    
+                    popOsc.connect(popGain);
+                    popGain.connect(audioContext.destination);
+                    
+                    popOsc.frequency.setValueAtTime(1500 + Math.random() * 500, audioContext.currentTime);
+                    popOsc.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.1);
+                    popOsc.type = 'sine';
+                    
+                    popGain.gain.setValueAtTime(0.1, audioContext.currentTime);
+                    popGain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.1);
+                    
+                    popOsc.start(audioContext.currentTime);
+                    popOsc.stop(audioContext.currentTime + 0.1);
+                }, 30);
+                
+            } catch (e) {
+                console.log('播放音效失败');
+            }
+        }
+
+        function init() {
+            container = document.getElementById('background');
+            bubbleContainer = document.getElementById('bubble-container');
+            
+            updateDimensions();
+            createBackgroundParticles();
+            
+            window.addEventListener('resize', updateDimensions);
+            bubbleContainer.addEventListener('click', handleClick);
+            bubbleContainer.addEventListener('touchstart', handleTouch, { passive: true });
+            
+            AppState.lastTime = performance.now();
+            requestAnimationFrame(gameLoop);
+            
+            for (let i = 0; i < 8; i++) {
+                setTimeout(() => createBubble(), i * 300);
+            }
+        }
+
+        function updateDimensions() {
+            windowWidth = window.innerWidth;
+            windowHeight = window.innerHeight;
+        }
+
+        function createBackgroundParticles() {
+            const bgContainer = document.getElementById('particles-bg');
+            const particleCount = Math.min(50, Math.floor((windowWidth * windowHeight) / 15000));
+            
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'bg-particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.top = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 3 + 's';
+                particle.style.animationDuration = (2 + Math.random() * 2) + 's';
+                bgContainer.appendChild(particle);
+            }
+        }
+
+        function random(min, max) {
+            return Math.random() * (max - min) + min;
+        }
+
+        function randomInt(min, max) {
+            return Math.floor(random(min, max + 1));
+        }
+
+        class Bubble {
+            constructor() {
+                this.id = uniqueId++;
+                this.radius = random(25, 75);
+                this.x = random(this.radius, windowWidth - this.radius);
+                this.y = windowHeight + this.radius;
+                this.color = COLORS[randomInt(0, COLORS.length - 1)];
+                this.opacity = random(0.65, 0.9);
+                this.speedY = random(0.8, 1.5);
+                this.wobbleSpeed = random(0.015, 0.035);
+                this.wobbleOffset = random(0, Math.PI * 2);
+                this.wobbleAmplitude = random(0.3, 0.8);
+                this.element = null;
+                this.isAlive = true;
+                this.rotation = random(0, 360);
+                this.rotationSpeed = random(-0.5, 0.5);
+                
+                this.createDOM();
+            }
+
+            createDOM() {
+                this.element = document.createElement('div');
+                this.element.className = 'bubble';
+                this.element.style.width = this.radius * 2 + 'px';
+                this.element.style.height = this.radius * 2 + 'px';
+                this.element.style.background = this.color.gradient;
+                this.element.style.boxShadow = `
+                    inset 2px 2px 15px rgba(255, 255, 255, 0.7),
+                    inset -2px -2px 10px rgba(0, 0, 0, 0.05),
+                    0 0 ${this.radius * 0.4}px ${this.color.shadow}
+                `;
+                this.element.style.opacity = this.opacity;
+                
+                bubbleContainer.appendChild(this.element);
+            }
+
+            update(deltaTime) {
+                if (!this.isAlive) return;
+
+                const timeScale = deltaTime / 16.67;
+                
+                this.y -= this.speedY * timeScale;
+                
+                this.wobbleOffset += this.wobbleSpeed * timeScale;
+                this.x += Math.sin(this.wobbleOffset) * this.wobbleAmplitude;
+                
+                this.rotation += this.rotationSpeed * timeScale;
+                
+                if (this.y < -this.radius * 2.5) {
+                    this.destroy();
+                    return;
+                }
+                
+                if (this.x < this.radius) this.x = this.radius;
+                if (this.x > windowWidth - this.radius) this.x = windowWidth - this.radius;
+                
+                this.element.style.left = (this.x - this.radius) + 'px';
+                this.element.style.top = (this.y - this.radius) + 'px';
+                this.element.style.transform = `rotate(${this.rotation}deg)`;
+            }
+
+            burst() {
+                if (!this.isAlive) return;
+                this.isAlive = false;
+                
+                this.element.classList.add('bursting');
+                
+                createBurstParticles(this.x, this.y, this.radius, this.color);
+                createSparkles(this.x, this.y);
+                playBubblePopSound();
+                
+                setTimeout(() => {
+                    if (this.element.parentNode) {
+                        this.element.parentNode.removeChild(this.element);
+                    }
+                }, 400);
+            }
+
+            destroy() {
+                if (!this.isAlive) return;
+                this.isAlive = false;
+                
+                if (this.element && this.element.parentNode) {
+                    this.element.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                    this.element.style.opacity = '0';
+                    this.element.style.transform = 'scale(0.5)';
+                    
+                    setTimeout(() => {
+                        if (this.element.parentNode) {
+                            this.element.parentNode.removeChild(this.element);
+                        }
+                    }, 500);
+                }
+                
+                const index = AppState.bubbles.indexOf(this);
+                if (index > -1) {
+                    AppState.bubbles.splice(index, 1);
+                }
+            }
+        }
+
+        function createBurstParticles(x, y, radius, color) {
+            const count = randomInt(10, 16);
+            
+            for (let i = 0; i < count; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                
+                const size = random(4, 12);
+                const angle = (i / count) * Math.PI * 2 + random(-0.3, 0.3);
+                const distance = random(radius * 0.8, radius * 2);
+                const tx = Math.cos(angle) * distance;
+                const ty = Math.sin(angle) * distance - random(30, 60);
+                
+                particle.style.width = size + 'px';
+                particle.style.height = size + 'px';
+                particle.style.left = x + 'px';
+                particle.style.top = y + 'px';
+                particle.style.background = color.gradient;
+                particle.style.boxShadow = `0 0 ${size}px ${color.shadow}`;
+                particle.style.setProperty('--tx', tx + 'px');
+                particle.style.setProperty('--ty', ty + 'px');
+                particle.style.animation = `particleFly ${random(0.4, 0.7)}s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards`;
+                
+                bubbleContainer.appendChild(particle);
+                
+                setTimeout(() => {
+                    if (particle.parentNode) {
+                        particle.parentNode.removeChild(particle);
+                    }
+                }, 700);
+            }
+        }
+
+        function createSparkles(x, y) {
+            const sparkleCount = randomInt(5, 8);
+            
+            for (let i = 0; i < sparkleCount; i++) {
+                const sparkle = document.createElement('div');
+                sparkle.className = 'sparkle';
+                
+                const size = random(8, 16);
+                const offsetX = random(-40, 40);
+                const offsetY = random(-40, 40);
+                
+                sparkle.innerHTML = `
+                    <svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 0L14 10L24 12L14 14L12 24L10 14L0 12L10 10L12 0Z" 
+                              fill="rgba(255,255,255,0.9)" 
+                              stroke="rgba(255,215,0,0.6)" 
+                              stroke-width="0.5"/>
+                    </svg>
+                `;
+                
+                sparkle.style.left = (x + offsetX) + 'px';
+                sparkle.style.top = (y + offsetY) + 'px';
+                sparkle.style.animation = `sparkleAnim ${random(0.3, 0.5)}s ease-out forwards`;
+                
+                bubbleContainer.appendChild(sparkle);
+                
+                setTimeout(() => {
+                    if (sparkle.parentNode) {
+                        sparkle.parentNode.removeChild(sparkle);
+                    }
+                }, 500);
+            }
+        }
+
+        function createBubble() {
+            if (AppState.bubbles.length >= AppState.maxBubbles) return;
+            
+            const bubble = new Bubble();
+            AppState.bubbles.push(bubble);
+        }
+
+        function handleClick(e) {
+            initAudio();
+            
+            const rect = bubbleContainer.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+            
+            checkBubbleClick(clickX, clickY);
+        }
+
+        function handleTouch(e) {
+            initAudio();
+            
+            if (e.touches.length > 0) {
+                const touch = e.touches[0];
+                const rect = bubbleContainer.getBoundingClientRect();
+                const touchX = touch.clientX - rect.left;
+                const touchY = touch.clientY - rect.top;
+                
+                checkBubbleClick(touchX, touchY);
+            }
+        }
+
+        function checkBubbleClick(x, y) {
+            for (let i = AppState.bubbles.length - 1; i >= 0; i--) {
+                const bubble = AppState.bubbles[i];
+                if (!bubble.isAlive) continue;
+                
+                const dx = x - bubble.x;
+                const dy = y - bubble.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance <= bubble.radius) {
+                    bubble.burst();
+                    break;
+                }
+            }
+        }
+
+        function gameLoop(currentTime) {
+            if (!AppState.isRunning) return;
+            
+            const deltaTime = currentTime - AppState.lastTime;
+            AppState.lastTime = currentTime;
+            
+            for (let i = AppState.bubbles.length - 1; i >= 0; i--) {
+                AppState.bubbles[i].update(deltaTime);
+            }
+            
+            AppState.bubbles = AppState.bubbles.filter(b => b.isAlive);
+            
+            if (currentTime - AppState.lastSpawnTime > AppState.spawnInterval) {
+                if (AppState.bubbles.length < AppState.maxBubbles) {
+                    createBubble();
+                    AppState.lastSpawnTime = currentTime;
+                    AppState.spawnInterval = random(300, 600);
+                }
+            }
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>英语对话小游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .game-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .game-header {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+
+        .game-header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            font-size: 16px;
+        }
+
+        .score, .lives {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .heart {
+            color: #ff4757;
+            font-size: 20px;
+        }
+
+        .game-content {
+            padding: 30px;
+        }
+
+        .scene-info {
+            background: #f8f9fa;
+            padding: 12px 20px;
+            border-radius: 25px;
+            margin-bottom: 25px;
+            font-size: 14px;
+            color: #666;
+            text-align: center;
+        }
+
+        .dialog-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            font-size: 18px;
+            line-height: 1.6;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .dialog-box .speaker {
+            font-weight: bold;
+            margin-bottom: 8px;
+            display: block;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .options-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .option-btn {
+            background: #f1f1f1;
+            border: 2px solid transparent;
+            padding: 18px 25px;
+            border-radius: 12px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .option-btn:hover {
+            background: #e8e8e8;
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+
+        .option-btn.selected {
+            border-color: #667eea;
+            background: #eef1ff;
+        }
+
+        .option-btn.correct {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+
+        .option-btn.wrong {
+            background: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+
+        .option-btn:disabled {
+            cursor: not-allowed;
+        }
+
+        .feedback-box {
+            margin-top: 25px;
+            padding: 20px;
+            border-radius: 12px;
+            display: none;
+        }
+
+        .feedback-box.show {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .feedback-box.correct {
+            background: #d4edda;
+            border-left: 5px solid #28a745;
+        }
+
+        .feedback-box.wrong {
+            background: #fff3cd;
+            border-left: 5px solid #ffc107;
+        }
+
+        .feedback-box h3 {
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .feedback-box p {
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .next-btn, .restart-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .next-btn:hover, .restart-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .game-over {
+            text-align: center;
+            padding: 40px 30px;
+        }
+
+        .game-over h2 {
+            font-size: 28px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .final-score {
+            font-size: 48px;
+            font-weight: bold;
+            color: #667eea;
+            margin: 20px 0;
+        }
+
+        .game-over p {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <h1>英语对话小游戏</h1>
+            <div class="status-bar">
+                <div class="score">
+                    <span>得分:</span>
+                    <span id="score">0</span>
+                </div>
+                <div class="lives">
+                    <span>机会:</span>
+                    <span id="lives">
+                        <span class="heart">❤</span>
+                        <span class="heart">❤</span>
+                        <span class="heart">❤</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="game-content">
+            <div class="scene-info" id="sceneInfo">场景: 餐厅点餐</div>
+            <div class="dialog-box" id="dialogBox">
+                <span class="speaker" id="speaker">服务员</span>
+                <span id="dialogText">Hello, welcome to our restaurant. May I take your order?</span>
+            </div>
+
+            <div class="options-container" id="optionsContainer">
+                <!-- 选项将通过JS动态生成 -->
+            </div>
+
+            <div class="feedback-box" id="feedbackBox">
+                <h3 id="feedbackTitle"></h3>
+                <p id="feedbackContent"></p>
+            </div>
+
+            <div id="nextButtonContainer" style="display: none; text-align: center;">
+                <button class="next-btn" id="nextBtn">下一题</button>
+            </div>
+
+            <div id="gameOverScreen" style="display: none;" class="game-over">
+                <h2>游戏结束</h2>
+                <div class="final-score" id="finalScore">0</div>
+                <p id="congratsMessage"></p>
+                <button class="restart-btn" id="restartBtn">重新开始</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 对话场景数据
+        const dialogScenes = [
+            {
+                scene: "餐厅点餐",
+                dialogs: [
+                    {
+                        speaker: "服务员",
+                        text: "Hello, welcome to our restaurant. May I take your order?",
+                        options: [
+                            { text: "Yes, I'd like a hamburger and fries, please.", correct: true, explanation: "这是正确的点餐回应。在餐厅点餐时，使用'I'd like...'是礼貌且常用的表达方式。" },
+                            { text: "What time is it now?", correct: false, explanation: "这个回答与服务员的问题无关。服务员在询问点餐，而不是时间。" },
+                            { text: "I'm fine, thank you.", correct: false, explanation: "这通常是回答'How are you?'的回应，不适合用于点餐场景。" },
+                            { text: "The food is very delicious!", correct: false, explanation: "这是吃完饭后的评价，不适合作为点餐的回应。" }
+                        ]
+                    },
+                    {
+                        speaker: "服务员",
+                        text: "Would you like anything to drink?",
+                        options: [
+                            { text: "A glass of water, please.", correct: true, explanation: "这是正确的回应方式，简洁礼貌地回答了服务员的问题。" },
+                            { text: "I don't like this restaurant.", correct: false, explanation: "这是对餐厅的负面评价，与问题无关。" },
+                            { text: "Yes, I want to pay now.", correct: false, explanation: "现在还没有点餐完毕，不应该提到结账。" },
+                            { text: "The weather is nice today.", correct: false, explanation: "这与服务员的问题无关，服务员在询问饮品。" }
+                        ]
+                    },
+                    {
+                        speaker: "服务员",
+                        text: "Your order will be ready in 10 minutes. Is there anything else I can get for you?",
+                        options: [
+                            { text: "No, thank you. That's all.", correct: true, explanation: "这是标准礼貌的回应，表示不需要其他东西了。" },
+                            { text: "Give me more food!", correct: false, explanation: "这种表达方式不够礼貌，应该使用更委婉的说法。" },
+                            { text: "How much is the bill?", correct: false, explanation: "现在还不是结账的时候，食物还没上。" },
+                            { text: "I want to speak to the manager.", correct: false, explanation: "没有特殊问题不需要找经理。" }
+                        ]
+                    }
+                ]
+            },
+            {
+                scene: "超市购物",
+                dialogs: [
+                    {
+                        speaker: "店员",
+                        text: "Can I help you find anything?",
+                        options: [
+                            { text: "Yes, I'm looking for milk. Where is it?", correct: true, explanation: "这是正确的回应，告诉店员你需要帮助找牛奶。" },
+                            { text: "I have a cat at home.", correct: false, explanation: "这个回答与店员的问题无关。" },
+                            { text: "The price is too high!", correct: false, explanation: "这不是回答店员的帮助询问，应该先回应是否需要帮助。" },
+                            { text: "I'm leaving now.", correct: false, explanation: "如果你不需要帮助，应该礼貌地拒绝。" }
+                        ]
+                    },
+                    {
+                        speaker: "店员",
+                        text: "The milk is in the dairy section, aisle 3.",
+                        options: [
+                            { text: "Thank you very much!", correct: true, explanation: "这是礼貌地感谢店员的帮助。" },
+                            { text: "I don't like milk.", correct: false, explanation: "既然你在找牛奶，这个回答不合逻辑。" },
+                            { text: "How old are you?", correct: false, explanation: "询问店员年龄是不礼貌的，且与当前对话无关。" },
+                            { text: "This store is big.", correct: false, explanation: "这是对商店的评价，不是对店员指引的回应。" }
+                        ]
+                    },
+                    {
+                        speaker: "收银员",
+                        text: "That'll be $15.99. Cash or card?",
+                        options: [
+                            { text: "Card, please.", correct: true, explanation: "这是标准的支付方式回应。" },
+                            { text: "I forgot my wallet.", correct: false, explanation: "这是个问题，但不是直接回答支付方式的问题。" },
+                            { text: "Can I have a discount?", correct: false, explanation: "应该先回答支付方式，然后再询问折扣。" },
+                            { text: "I want more items.", correct: false, explanation: "现在是结账环节，应该先完成支付。" }
+                        ]
+                    }
+                ]
+            },
+            {
+                scene: "咖啡店",
+                dialogs: [
+                    {
+                        speaker: "咖啡师",
+                        text: "Good morning! What can I get for you?",
+                        options: [
+                            { text: "Good morning! I'd like a latte, please.", correct: true, explanation: "这是礼貌的回应，先问候然后点单。" },
+                            { text: "I'm tired.", correct: false, explanation: "这不是点单的回应方式。" },
+                            { text: "Do you have tea?", correct: false, explanation: "虽然可以问，但应该先回应问候并明确点单。" },
+                            { text: "The coffee smells good.", correct: false, explanation: "这是对咖啡的评价，不是点单回应。" }
+                        ]
+                    },
+                    {
+                        speaker: "咖啡师",
+                        text: "Would you like that hot or iced?",
+                        options: [
+                            { text: "Hot, please.", correct: true, explanation: "这是直接回答咖啡温度的问题。" },
+                            { text: "Yes, I do.", correct: false, explanation: "这个回答太模糊，没有明确说明要热的还是冰的。" },
+                            { text: "I want a cookie too.", correct: false, explanation: "应该先回答温度问题，然后再加点其他东西。" },
+                            { text: "No, thank you.", correct: false, explanation: "这会让咖啡师困惑，你需要选择热的或冰的。" }
+                        ]
+                    },
+                    {
+                        speaker: "咖啡师",
+                        text: "Here's your latte. Enjoy your day!",
+                        options: [
+                            { text: "Thank you! You too!", correct: true, explanation: "这是礼貌地感谢并回祝对方愉快。" },
+                            { text: "It's too expensive.", correct: false, explanation: "不应该在拿到咖啡后抱怨价格。" },
+                            { text: "I don't like it.", correct: false, explanation: "如果不满意应该礼貌地提出，而不是直接否定。" },
+                            { text: "Bye.", correct: false, explanation: "虽然可以接受，但不够礼貌，最好加上感谢。" }
+                        ]
+                    }
+                ]
+            },
+            {
+                scene: "服装店",
+                dialogs: [
+                    {
+                        speaker: "导购",
+                        text: "Hi there! Are you looking for anything specific?",
+                        options: [
+                            { text: "Yes, I'm looking for a blue shirt.", correct: true, explanation: "这是明确回答导购的询问，说明你在找什么。" },
+                            { text: "The store is crowded.", correct: false, explanation: "这不是回答导购的问题。" },
+                            { text: "I'm just browsing.", correct: false, explanation: "虽然这是常见回答，但选项A更符合积极互动的场景。" },
+                            { text: "How much is this?", correct: false, explanation: "应该先回答是否需要帮助，然后再问价格。" }
+                        ]
+                    },
+                    {
+                        speaker: "导购",
+                        text: "We have some nice blue shirts over here. What size are you?",
+                        options: [
+                            { text: "I'm a medium.", correct: true, explanation: "这是直接回答尺码问题。" },
+                            { text: "Show me more colors.", correct: false, explanation: "应该先回答尺码问题。" },
+                            { text: "Can I try it on?", correct: false, explanation: "应该先告诉导购你的尺码。" },
+                            { text: "Is it on sale?", correct: false, explanation: "应该先回答尺码问题。" }
+                        ]
+                    },
+                    {
+                        speaker: "导购",
+                        text: "Here you go. The fitting rooms are over there.",
+                        options: [
+                            { text: "Thank you very much!", correct: true, explanation: "这是礼貌地感谢导购的帮助。" },
+                            { text: "I don't like this one.", correct: false, explanation: "既然你同意试穿，这样说不太合适。" },
+                            { text: "How long can I try it on?", correct: false, explanation: "通常不需要问这个问题，试衣间是免费使用的。" },
+                            { text: "Where is the bathroom?", correct: false, explanation: "应该先感谢并去试衣间。" }
+                        ]
+                    }
+                ]
+            },
+            {
+                scene: "书店",
+                dialogs: [
+                    {
+                        speaker: "店员",
+                        text: "Welcome to our bookstore! Can I help you find a book?",
+                        options: [
+                            { text: "Yes, I'm looking for a novel by J.K. Rowling.", correct: true, explanation: "这是明确告诉店员你在找什么书。" },
+                            { text: "I love reading.", correct: false, explanation: "这不是回答店员的问题。" },
+                            { text: "The books are expensive.", correct: false, explanation: "这不是回答店员的帮助询问。" },
+                            { text: "Do you have magazines?", correct: false, explanation: "虽然可以问，但应该先回应是否需要帮助找书。" }
+                        ]
+                    },
+                    {
+                        speaker: "店员",
+                        text: "We have all the Harry Potter books over in the fantasy section.",
+                        options: [
+                            { text: "Great! Could you show me where that is?", correct: true, explanation: "这是礼貌地请店员带路。" },
+                            { text: "I don't like fantasy.", correct: false, explanation: "既然你在找J.K. Rowling的书，这个回答不合逻辑。" },
+                            { text: "How much are they?", correct: false, explanation: "应该先找到书的位置。" },
+                            { text: "I'll take all of them.", correct: false, explanation: "应该先看看书再说。" }
+                        ]
+                    },
+                    {
+                        speaker: "店员",
+                        text: "Here they are. Would you like to purchase one?",
+                        options: [
+                            { text: "Yes, I'll take the first one.", correct: true, explanation: "这是明确告诉店员你想买哪一本。" },
+                            { text: "Maybe later.", correct: false, explanation: "这不是直接回答是否购买。" },
+                            { text: "Do you have a discount?", correct: false, explanation: "应该先决定是否购买。" },
+                            { text: "Can I read it here?", correct: false, explanation: "书店通常不允许在店内阅读未购买的书籍。" }
+                        ]
+                    }
+                ]
+            }
+        ];
+
+        // 游戏状态
+        let currentSceneIndex = 0;
+        let currentDialogIndex = 0;
+        let score = 0;
+        let lives = 3;
+        let isAnswered = false;
+
+        // DOM元素
+        const scoreElement = document.getElementById('score');
+        const livesElement = document.getElementById('lives');
+        const sceneInfoElement = document.getElementById('sceneInfo');
+        const speakerElement = document.getElementById('speaker');
+        const dialogTextElement = document.getElementById('dialogText');
+        const optionsContainer = document.getElementById('optionsContainer');
+        const feedbackBox = document.getElementById('feedbackBox');
+        const feedbackTitle = document.getElementById('feedbackTitle');
+        const feedbackContent = document.getElementById('feedbackContent');
+        const nextButtonContainer = document.getElementById('nextButtonContainer');
+        const nextBtn = document.getElementById('nextBtn');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const finalScoreElement = document.getElementById('finalScore');
+        const congratsMessage = document.getElementById('congratsMessage');
+        const restartBtn = document.getElementById('restartBtn');
+
+        // 初始化游戏
+        function initGame() {
+            currentSceneIndex = 0;
+            currentDialogIndex = 0;
+            score = 0;
+            lives = 3;
+            isAnswered = false;
+            updateScore();
+            updateLives();
+            gameOverScreen.style.display = 'none';
+            loadDialog();
+        }
+
+        // 更新得分
+        function updateScore() {
+            scoreElement.textContent = score;
+        }
+
+        // 更新生命值
+        function updateLives() {
+            livesElement.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                const heart = document.createElement('span');
+                heart.className = 'heart';
+                heart.textContent = i < lives ? '❤' : '💔';
+                livesElement.appendChild(heart);
+            }
+        }
+
+        // 加载对话
+        function loadDialog() {
+            const currentScene = dialogScenes[currentSceneIndex];
+            const currentDialog = currentScene.dialogs[currentDialogIndex];
+            
+            sceneInfoElement.textContent = `场景: ${currentScene.scene}`;
+            speakerElement.textContent = currentDialog.speaker;
+            dialogTextElement.textContent = currentDialog.text;
+            
+            // 清空选项容器
+            optionsContainer.innerHTML = '';
+            feedbackBox.classList.remove('show', 'correct', 'wrong');
+            nextButtonContainer.style.display = 'none';
+            isAnswered = false;
+            
+            // 创建选项按钮
+            currentDialog.options.forEach((option, index) => {
+                const button = document.createElement('button');
+                button.className = 'option-btn';
+                button.textContent = `${index + 1}. ${option.text}`;
+                button.dataset.index = index;
+                button.addEventListener('click', () => selectOption(option, button));
+                optionsContainer.appendChild(button);
+            });
+        }
+
+        // 选择选项
+        function selectOption(option, button) {
+            if (isAnswered) return;
+            isAnswered = true;
+            
+            // 禁用所有按钮
+            const allButtons = optionsContainer.querySelectorAll('.option-btn');
+            allButtons.forEach(btn => btn.disabled = true);
+            
+            if (option.correct) {
+                // 答对
+                button.classList.add('correct');
+                score++;
+                updateScore();
+                
+                feedbackTitle.textContent = '🎉 正确！';
+                feedbackContent.textContent = option.explanation;
+                feedbackBox.className = 'feedback-box show correct';
+            } else {
+                // 答错
+                button.classList.add('wrong');
+                lives--;
+                updateLives();
+                
+                // 显示正确答案
+                allButtons.forEach(btn => {
+                    const optIndex = parseInt(btn.dataset.index);
+                    if (dialogScenes[currentSceneIndex].dialogs[currentDialogIndex].options[optIndex].correct) {
+                        btn.classList.add('correct');
+                    }
+                });
+                
+                feedbackTitle.textContent = '😅 答错了';
+                feedbackContent.textContent = `正确答案是: "${dialogScenes[currentSceneIndex].dialogs[currentDialogIndex].options.find(o => o.correct).text}"\n\n${option.explanation}`;
+                feedbackBox.className = 'feedback-box show wrong';
+            }
+            
+            nextButtonContainer.style.display = 'block';
+            
+            // 检查游戏是否结束
+            if (lives <= 0) {
+                setTimeout(showGameOver, 1000);
+            }
+        }
+
+        // 下一题
+        function nextQuestion() {
+            feedbackBox.classList.remove('show', 'correct', 'wrong');
+            nextButtonContainer.style.display = 'none';
+            
+            // 检查是否当前场景对话已完成
+            const currentScene = dialogScenes[currentSceneIndex];
+            if (currentDialogIndex < currentScene.dialogs.length - 1) {
+                currentDialogIndex++;
+            } else if (currentSceneIndex < dialogScenes.length - 1) {
+                // 进入下一个场景
+                currentSceneIndex++;
+                currentDialogIndex = 0;
+            } else {
+                // 所有场景完成
+                showGameOver();
+                return;
+            }
+            
+            loadDialog();
+        }
+
+        // 显示游戏结束
+        function showGameOver() {
+            gameOverScreen.style.display = 'block';
+            finalScoreElement.textContent = score;
+            
+            let message = '';
+            const totalQuestions = dialogScenes.reduce((sum, scene) => sum + scene.dialogs.length, 0);
+            const percentage = Math.round((score / totalQuestions) * 100);
+            
+            if (percentage === 100) {
+                message = '太棒了！你是英语对话大师！🏆';
+            } else if (percentage >= 80) {
+                message = '非常优秀！你的英语对话能力很强！👍';
+            } else if (percentage >= 60) {
+                message = '做得不错！继续努力练习！💪';
+            } else {
+                message = '加油！多练习几次会更好！😊';
+            }
+            
+            congratsMessage.textContent = message;
+        }
+
+        // 事件监听
+        nextBtn.addEventListener('click', nextQuestion);
+        restartBtn.addEventListener('click', initGame);
+
+        // 开始游戏
+        initGame();
+    </script>
+</body>
+</html>
